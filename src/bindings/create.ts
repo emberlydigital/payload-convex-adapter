@@ -22,6 +22,7 @@ import {
   CreateGlobalVersion,
   CreateMigration,
 } from "payload";
+import { sanitizeIncomingData } from "../tools/sanitize-incoming-data";
 
 /**
  * Props for the create operation.
@@ -223,8 +224,20 @@ export async function create(props: AdapterCreateProps) {
   const { service, incomingCreate } = props;
   const { collection, data, draft, returning = true } = incomingCreate as any;
 
+  // Filter incoming data against the collection's declared schema + known
+  // Payload system fields. Prevents UI-only form inputs (notably
+  // "confirm-password" on the user-create form) from being persisted.
+  const filteredData = sanitizeIncomingData({
+    service,
+    collection,
+    data: data as Record<string, unknown>,
+    operation: "create",
+  });
+
   // Prepare document data with draft status if applicable
-  const documentData = draft ? { ...data, _status: "draft" } : data;
+  const documentData = draft
+    ? { ...(filteredData as Record<string, unknown>), _status: "draft" }
+    : filteredData;
 
   // Insert the document
   const docId = await service.db.mutation({}).insert.adapter({

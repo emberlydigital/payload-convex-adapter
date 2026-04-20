@@ -9,6 +9,7 @@
 
 import type { AdapterService } from "../adapter/service";
 import { Upsert } from "payload";
+import { sanitizeIncomingData } from "../tools/sanitize-incoming-data";
 
 type IncrementOp = {
   field: string;
@@ -131,6 +132,15 @@ export async function upsert(props: AdapterUpsertProps) {
   const { service, incomingUpsert } = props;
   const { collection, data, returning = true } = incomingUpsert as any;
 
+  // Filter the upsert payload against the collection schema. Applied once
+  // here so both branches (patch + insert) share the same safe payload.
+  const filteredData = sanitizeIncomingData({
+    service,
+    collection,
+    data: data as Record<string, unknown>,
+    operation: "upsert",
+  });
+
   // Pass all incoming params to queryProcessor
   const processedQuery = service.tools.queryProcessor({
     service,
@@ -160,7 +170,7 @@ export async function upsert(props: AdapterUpsertProps) {
     await applyPatchWithIncrements(
       service,
       docId,
-      data as Record<string, unknown>
+      filteredData as Record<string, unknown>
     );
 
     // Only fetch if returning is true (default)
@@ -178,7 +188,9 @@ export async function upsert(props: AdapterUpsertProps) {
     return updatedDoc as Awaited<ReturnType<Upsert>>;
   } else {
     // Document doesn't exist - create it
-    const normalizedData = normalizeInsertData(data as Record<string, unknown>);
+    const normalizedData = normalizeInsertData(
+      filteredData as Record<string, unknown>
+    );
 
     const docId = await service.db.mutation({}).insert.adapter({
       service,

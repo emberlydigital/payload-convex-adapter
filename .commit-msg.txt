@@ -1,0 +1,16 @@
+fix: filter incoming data against collection schema on create/update/upsert
+
+Payload's admin forms can forward UI-only fields (notably
+"confirm-password" on the user create form) to the database adapter.
+Postgres silently drops unknown columns and Mongoose filters by its
+schema, so this was invisible with those backends. Convex's adapter
+writes whatever it's handed, so the stray field landed on disk
+verbatim -- storing the plaintext password alongside the bcrypt hash.
+
+Add `sanitizeIncomingData` that allow-lists top-level keys against the
+collection's `flattenedFields` plus known Payload system fields, and
+blocklists the known virtual form inputs as a belt-and-suspenders
+fallback when the collection config can't be resolved. Wire it into
+create, updateOne, updateMany, and upsert before the data reaches
+insert/patch. Dropped keys emit a warning so schema drift surfaces
+immediately.

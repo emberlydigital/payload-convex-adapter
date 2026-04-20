@@ -23,6 +23,7 @@ import {
   UpdateGlobalVersion,
   UpdateJobs,
 } from "payload";
+import { sanitizeIncomingData } from "../tools/sanitize-incoming-data";
 
 type IncrementOp = {
   field: string;
@@ -220,11 +221,23 @@ export async function updateOne(props: AdapterUpdateOneProps) {
     throw new Error("updateOne requires either id or where parameter");
   }
 
+  // Filter incoming patch data against the collection's declared schema
+  // so virtual form inputs (e.g. "confirm-password") never hit disk.
+  const filteredData = sanitizeIncomingData({
+    service,
+    collection,
+    data: data as Record<string, unknown>,
+    operation: "update",
+  });
+
   // Prepare update data with draft status if applicable
   const updateData =
     draft !== undefined
-      ? { ...data, _status: draft ? "draft" : "published" }
-      : data;
+      ? {
+          ...(filteredData as Record<string, unknown>),
+          _status: draft ? "draft" : "published",
+        }
+      : filteredData;
 
   // Update the document using patch
   await applyPatchWithIncrements(
@@ -302,11 +315,22 @@ export async function updateMany(props: AdapterUpdateManyProps) {
   // Apply limit if provided
   const docsToUpdate = limit ? docs.slice(0, limit) : docs;
 
+  // Filter the bulk patch payload once up-front.
+  const filteredData = sanitizeIncomingData({
+    service,
+    collection,
+    data: data as Record<string, unknown>,
+    operation: "update",
+  });
+
   // Prepare update data with draft status if applicable
   const updateData =
     draft !== undefined
-      ? { ...data, _status: draft ? "draft" : "published" }
-      : data;
+      ? {
+          ...(filteredData as Record<string, unknown>),
+          _status: draft ? "draft" : "published",
+        }
+      : filteredData;
 
   // Update each document
   // Docs from collectionWhereQuery.adapter are Payload-shaped (`id`, not `_id`).

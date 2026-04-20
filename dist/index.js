@@ -2143,6 +2143,95 @@ function createRandomID() {
   return uuidv4();
 }
 
+// src/tools/sanitize-incoming-data.ts
+var SYSTEM_ALLOW_LIST = /* @__PURE__ */ new Set([
+  // Identity / timestamps
+  "id",
+  "_id",
+  "createdAt",
+  "updatedAt",
+  "_creationTime",
+  // Draft/publish workflow
+  "_status",
+  // Verification workflow
+  "_verified",
+  "_verificationToken",
+  // Auth runtime state
+  "_strategy",
+  "collection",
+  "loginAttempts",
+  "lockUntil",
+  "sessions",
+  "hash",
+  "salt",
+  "resetPasswordToken",
+  "resetPasswordExpiration",
+  "apiKey",
+  "apiKeyIndex"
+]);
+var NEVER_ALLOWED = /* @__PURE__ */ new Set([
+  "confirm-password",
+  "current-password",
+  "new-password"
+]);
+function sanitizeIncomingData(props) {
+  const { service, collection, data, operation } = props;
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return {};
+  }
+  const payload = service.payload;
+  const config = payload?.collections?.[collection]?.config;
+  const flattened = config && Array.isArray(config.flattenedFields) ? config.flattenedFields : null;
+  if (!flattened) {
+    const fallback = {};
+    const dropped2 = [];
+    for (const [key, value] of Object.entries(data)) {
+      if (NEVER_ALLOWED.has(key)) {
+        dropped2.push(key);
+        continue;
+      }
+      fallback[key] = value;
+    }
+    if (dropped2.length > 0) {
+      service.system.logger({
+        fn: "sanitizeIncomingData",
+        reason: "virtual_form_field_blocklist",
+        operation,
+        collection,
+        droppedKeys: dropped2
+      }).warn();
+    }
+    return fallback;
+  }
+  const allowed = new Set(SYSTEM_ALLOW_LIST);
+  for (const field of flattened) {
+    if (field?.name) allowed.add(field.name);
+  }
+  const result = {};
+  const dropped = [];
+  for (const [key, value] of Object.entries(data)) {
+    if (NEVER_ALLOWED.has(key)) {
+      dropped.push(key);
+      continue;
+    }
+    if (allowed.has(key)) {
+      result[key] = value;
+      continue;
+    }
+    dropped.push(key);
+  }
+  if (dropped.length > 0) {
+    service.system.logger({
+      fn: "sanitizeIncomingData",
+      reason: "unknown_top_level_key",
+      operation,
+      collection,
+      droppedKeys: dropped
+    }).warn();
+  }
+  return result;
+}
+
 // src/tools/scripts.ts
 import { spawn } from "child_process";
 
@@ -2516,7 +2605,13 @@ async function unsetLatestOnOlderGlobalVersions(props) {
 async function create(props) {
   const { service, incomingCreate } = props;
   const { collection, data, draft, returning = true } = incomingCreate;
-  const documentData = draft ? { ...data, _status: "draft" } : data;
+  const filteredData = sanitizeIncomingData({
+    service,
+    collection,
+    data,
+    operation: "create"
+  });
+  const documentData = draft ? { ...filteredData, _status: "draft" } : filteredData;
   const docId = await service.db.mutation({}).insert.adapter({
     service,
     collection,
@@ -3080,7 +3175,16 @@ async function updateOne(props) {
   } else {
     throw new Error("updateOne requires either id or where parameter");
   }
-  const updateData = draft !== void 0 ? { ...data, _status: draft ? "draft" : "published" } : data;
+  const filteredData = sanitizeIncomingData({
+    service,
+    collection,
+    data,
+    operation: "update"
+  });
+  const updateData = draft !== void 0 ? {
+    ...filteredData,
+    _status: draft ? "draft" : "published"
+  } : filteredData;
   await applyPatchWithIncrements(
     service,
     docId,
@@ -3123,7 +3227,16 @@ async function updateMany(props) {
     return null;
   }
   const docsToUpdate = limit ? docs.slice(0, limit) : docs;
-  const updateData = draft !== void 0 ? { ...data, _status: draft ? "draft" : "published" } : data;
+  const filteredData = sanitizeIncomingData({
+    service,
+    collection,
+    data,
+    operation: "update"
+  });
+  const updateData = draft !== void 0 ? {
+    ...filteredData,
+    _status: draft ? "draft" : "published"
+  } : filteredData;
   for (const doc of docsToUpdate) {
     await applyPatchWithIncrements(
       service,
@@ -3392,6 +3505,12 @@ function normalizeInsertData(data) {
 async function upsert2(props) {
   const { service, incomingUpsert } = props;
   const { collection, data, returning = true } = incomingUpsert;
+  const filteredData = sanitizeIncomingData({
+    service,
+    collection,
+    data,
+    operation: "upsert"
+  });
   const processedQuery = service.tools.queryProcessor({
     service,
     ...incomingUpsert,
@@ -3408,7 +3527,7 @@ async function upsert2(props) {
     await applyPatchWithIncrements2(
       service,
       docId,
-      data
+      filteredData
     );
     if (!returning) {
       return { id: docId };
@@ -3420,7 +3539,9 @@ async function upsert2(props) {
     });
     return updatedDoc;
   } else {
-    const normalizedData = normalizeInsertData(data);
+    const normalizedData = normalizeInsertData(
+      filteredData
+    );
     const docId = await service.db.mutation({}).insert.adapter({
       service,
       collection,
