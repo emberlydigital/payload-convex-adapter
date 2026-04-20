@@ -150,7 +150,12 @@ export async function upsert(props: AdapterUpsertProps) {
 
   if (existingDocs && existingDocs.length > 0) {
     // Document exists - update it
-    const docId = existingDocs[0]._id as string;
+    // NOTE: Docs returned from collectionWhereLimitQuery.adapter have been
+    // transformed to Payload shape (Convex `_id` is renamed to `id` by
+    // defaultKeyToPayload). Reading `._id` here yields undefined, which
+    // causes `patch` / `getById` to be called without an id, producing
+    // "No ID provided" warnings and silently dropping the write.
+    const docId = existingDocs[0].id as string;
 
     await applyPatchWithIncrements(
       service,

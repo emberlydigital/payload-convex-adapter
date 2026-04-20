@@ -213,7 +213,9 @@ export async function updateOne(props: AdapterUpdateOneProps) {
       );
     }
 
-    docId = docs[0]._id as string;
+    // Docs from collectionWhereLimitQuery.adapter are already Payload-shaped
+    // (Convex `_id` is renamed to `id`). Reading `_id` here yields undefined.
+    docId = docs[0].id as string;
   } else {
     throw new Error("updateOne requires either id or where parameter");
   }
@@ -307,10 +309,11 @@ export async function updateMany(props: AdapterUpdateManyProps) {
       : data;
 
   // Update each document
+  // Docs from collectionWhereQuery.adapter are Payload-shaped (`id`, not `_id`).
   for (const doc of docsToUpdate) {
     await applyPatchWithIncrements(
       service,
-      doc._id as string,
+      doc.id as string,
       updateData as Record<string, unknown>
     );
   }
@@ -373,7 +376,9 @@ export async function updateGlobal(props: AdapterUpdateGlobalProps) {
     throw new Error(`Global document not found for slug: ${slug}`);
   }
 
-  const docId = docs[0]._id as string;
+  // Docs from collectionWhereLimitQuery.adapter are Payload-shaped
+  // (Convex `_id` is renamed to `id`).
+  const docId = docs[0].id as string;
 
   // Update the global document
   await applyPatchWithIncrements(
@@ -456,7 +461,9 @@ export async function updateVersion(props: AdapterUpdateVersionProps) {
       return null as unknown as Awaited<ReturnType<UpdateVersion>>;
     }
 
-    docId = docs[0]._id as string;
+    // Docs from collectionWhereLimitQuery.adapter are Payload-shaped
+    // (Convex `_id` is renamed to `id`).
+    docId = docs[0].id as string;
   } else {
     throw new Error("updateVersion requires either id or where parameter");
   }
@@ -550,7 +557,9 @@ export async function updateGlobalVersion(
       return null as unknown as Awaited<ReturnType<UpdateGlobalVersion>>;
     }
 
-    docId = docs[0]._id as string;
+    // Docs from collectionWhereLimitQuery.adapter are Payload-shaped
+    // (Convex `_id` is renamed to `id`).
+    docId = docs[0].id as string;
   } else {
     throw new Error(
       "updateGlobalVersion requires either id or where parameter"
@@ -662,10 +671,11 @@ export async function updateJobs(props: AdapterUpdateJobsProps) {
     }
 
     // Update each job
+    // Jobs from collectionWhere*Query.adapter are Payload-shaped (`id`, not `_id`).
     for (const job of jobs) {
       await applyPatchWithIncrements(
         service,
-        job._id as string,
+        job.id as string,
         data as Record<string, unknown>
       );
     }

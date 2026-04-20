@@ -128,12 +128,13 @@ async function unsetLatestOnOlderVersions(props: {
   });
 
   // Update each document to unset the latest flag
+  // Docs from collectionWhereQuery.adapter are Payload-shaped (`id`, not `_id`).
   if (docs && docs.length > 0) {
     await Promise.all(
       docs.map((doc) =>
         service.db.mutation({}).patch.adapter({
           service,
-          id: doc._id as string,
+          id: doc.id as string,
           data: { latest: false }, // Set to false (undefined is stripped by Convex patch)
         })
       )
@@ -183,12 +184,13 @@ async function unsetLatestOnOlderGlobalVersions(props: {
   });
 
   // Update each document to unset the latest flag
+  // Docs from collectionWhereQuery.adapter are Payload-shaped (`id`, not `_id`).
   if (docs && docs.length > 0) {
     await Promise.all(
       docs.map((doc) =>
         service.db.mutation({}).patch.adapter({
           service,
-          id: doc._id as string,
+          id: doc.id as string,
           data: { latest: false }, // Set to false (undefined is stripped by Convex patch)
         })
       )

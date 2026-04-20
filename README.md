@@ -1,4 +1,13 @@
-# Payload Convex Adapter
+# @emberly/payload-convex-adapter
+
+> **Fork notice:** This is the Emberly Digital fork of [`odele-tech/payload-convex-adapter`](https://github.com/odele-tech/payload-convex-adapter).
+> It currently carries fixes that have not yet been accepted upstream. Tracking against upstream `main`.
+>
+> **Fork changes:**
+>
+> - Fix: `upsert`, `updateOne({where})`, `updateMany`, `updateGlobal`, `updateVersion`, `updateGlobalVersion`, `updateJobs({where})`, and the version-latest-flag bookkeeping in `createVersion`/`createGlobalVersion` were reading `._id` on Payload-shaped docs returned by `collectionWhere*Query.adapter`. The `toPayload` processor renames Convex `_id` to `id`, so these reads yielded `undefined` and the subsequent `patch`/`getById` calls were silently dropped with `"No ID provided"` warnings. Fixed to read `.id` instead.
+> - Self-contained `tsconfig.json` (no longer extends the upstream monorepo `specs` package) and removed the `specs: workspace:*` devDependency so the package installs cleanly from a git URL.
+> - Added a `prepare` script so `npm i github:emberlydigital/payload-convex-adapter` builds automatically.
 
 A database adapter for [Payload CMS](https://payloadcms.com/) that uses [Convex](https://www.convex.dev/) as the underlying database. This adapter enables seamless integration between Payload's data layer and Convex's real-time, serverless database platform.
 

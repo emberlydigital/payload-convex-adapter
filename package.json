@@ -1,17 +1,20 @@
 {
-  "name": "payload-convex-adapter",
-  "version": "1.0.4",
-  "description": "A database adapter for Payload CMS that uses Convex as the underlying database",
-  "author": "Odele Technologies",
+  "name": "@emberly/payload-convex-adapter",
+  "version": "1.0.4-emberly.0",
+  "description": "A database adapter for Payload CMS that uses Convex as the underlying database (Emberly fork)",
+  "author": "Emberly Digital <support@emberlydigital.com> (https://emberlydigital.com)",
+  "contributors": [
+    "Odele Technologies (original author)"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/odele-tech/payload-convex-adapter.git"
+    "url": "git+https://github.com/emberlydigital/payload-convex-adapter.git"
   },
   "bugs": {
-    "url": "https://github.com/odele-tech/payload-convex-adapter/issues"
+    "url": "https://github.com/emberlydigital/payload-convex-adapter/issues"
   },
-  "homepage": "https://github.com/odele-tech/payload-convex-adapter#readme",
+  "homepage": "https://github.com/emberlydigital/payload-convex-adapter#readme",
   "files": [
     "dist",
     "LICENSE.md",
@@ -32,16 +35,13 @@
     "./safe-service": {
       "types": "./dist/adapter/safe-service.d.ts",
       "default": "./dist/adapter/safe-service.js"
-    },
-    "./try-catch": {
-      "types": "./dist/try-catch.d.ts",
-      "default": "./dist/try-catch.js"
     }
   },
   "scripts": {
     "build": "rimraf dist && tsup",
     "dev": "tsup --watch",
-    "release": "pnpm build && pnpm publish --access public"
+    "prepare": "npm run build",
+    "release": "npm run build && npm publish --access public"
   },
   "keywords": [
     "payload",
@@ -58,7 +58,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "specs": "workspace:*",
-    "tsup": "^8.5.1"
+    "tsup": "^8.5.1",
+    "typescript": "^5.6.3"
   }
 }
