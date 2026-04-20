@@ -25,7 +25,9 @@ coverage
 .next/
 out/
 build
-dist
+# dist/ is committed so consumers installing from a git URL (e.g.
+# github:emberlydigital/payload-convex-adapter) receive prebuilt output
+# without needing to run `prepare`/`tsup` during install.
 
 
 # Debug

@@ -40,7 +40,6 @@
   "scripts": {
     "build": "rimraf dist && tsup",
     "dev": "tsup --watch",
-    "prepare": "npm run build",
     "release": "npm run build && npm publish --access public"
   },
   "keywords": [
